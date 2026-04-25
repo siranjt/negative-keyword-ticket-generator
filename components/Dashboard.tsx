@@ -328,7 +328,7 @@ export default function Dashboard() {
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="bg-gradient-to-b from-[#1f0843] to-[#13063a]">
-                  {["Date", "Time", "Source", "Entity ID", "Business Name", "AM Name", "Category", "Subject", "Message", "Analysis", "Ticket"].map((h) => (
+                  {["Date", "Source", "Entity ID", "Business Name", "AM Name", "Category", "Subject", "Message", "Analysis", "Ticket"].map((h) => (
                     <th key={h} className="whitespace-nowrap border-b border-[rgba(200,202,254,0.18)] px-2 py-3 text-left text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#c8cafe]">{h}</th>
                   ))}
                 </tr>
@@ -341,8 +341,7 @@ export default function Dashboard() {
                   const createdId = ticketCreated.get(key);
                   return (
                     <tr key={key + idx} className="border-b border-[rgba(200,202,254,0.10)] transition hover:bg-[rgba(120,104,244,.06)]">
-                      <td className="whitespace-nowrap px-2 py-2 text-[#c8cafe]">{fmtDate(a.message_date)}</td>
-                      <td className="whitespace-nowrap px-2 py-2 text-[rgba(243,237,253,0.55)]">{a.message_time}</td>
+                      <td className="whitespace-nowrap px-2 py-2 text-white font-medium">{fmtDate(a.message_date)}</td>
                       <td className="px-2 py-2"><span className="inline-block rounded-[9999px] border border-[rgba(200,202,254,0.18)] bg-[#24125c]/50 px-2 py-0.5 text-[10px] font-bold text-[#c8cafe]">{a.source}</span></td>
                       <td className="max-w-[80px] truncate px-2 py-2 font-mono text-[10px] text-[rgba(243,237,253,0.55)]">{a.entity_id.slice(0, 8)}...</td>
                       <td className="px-2 py-2"><button onClick={() => setDetailAlert(a)} className="block max-w-[140px] truncate text-left font-bold text-white hover:text-[#ffa8cd]">{a.business_name}</button></td>

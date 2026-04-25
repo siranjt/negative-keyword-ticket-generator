@@ -26,10 +26,10 @@ export default function Home() {
             Retention risk review · refresh on demand
           </div>
         </div>
-        <h1 className="relative mx-auto mb-5 font-[var(--font-display)] font-black leading-[0.95]" style={{ fontSize: "4.75rem", letterSpacing: "-0.03em" }}>
+        <h1 className="relative mx-auto mb-5 inline-block font-[var(--font-display)] font-black" style={{ fontSize: "4.75rem", letterSpacing: "-0.04em", lineHeight: "0.92" }}>
           <span className="text-white">Negative Keyword </span>
-          <span className="zoca-gradient-text">Alert</span>
-          <span className="absolute -right-1 -top-1 text-2xl text-[#ff86e1]">✦</span>
+          <span style={{ background: "linear-gradient(135deg, #ff86e1 0%, #ffa8cd 30%, #e5ccff 70%, #c8cafe 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Alert</span>
+          <span className="absolute" style={{ right: "-16px", top: "-10px", fontSize: "24px", color: "#ff86e1", WebkitTextFillColor: "#ff86e1" }}>✦</span>
         </h1>
         <p className="mx-auto mb-5 max-w-2xl text-base leading-relaxed text-[#c8cafe]">
           Which customers are upset, where dissatisfaction was flagged, and which
