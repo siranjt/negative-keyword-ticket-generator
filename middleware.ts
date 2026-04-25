@@ -10,7 +10,8 @@ export function middleware(req: NextRequest) {
     pathname === "/api/health" ||
     pathname.startsWith("/api/cron/") ||
     pathname.startsWith("/api/alerts") ||
-    pathname.startsWith("/api/create-tickets")
+    pathname.startsWith("/api/create-tickets") ||
+    pathname.startsWith("/api/tickets-created")
   ) {
     return NextResponse.next();
   }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
+import DatePicker from "@/components/DatePicker";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend,
 } from "chart.js";
@@ -85,7 +86,7 @@ export default function Dashboard() {
   const [selected, setSelected] = useState<Set<string>>(new Set());  // kept for bulk ops if needed later
   const [ticketCreating, setTicketCreating] = useState<Set<string>>(new Set());
   const [ticketCreated, setTicketCreated] = useState<Map<string, string>>(new Map()); // key → ticket ID
-  const [ticketLog, setTicketLog] = useState<{ ticketId: string; url: string; business: string; am: string; category: string; date: string; createdAt: string }[]>([]);
+  const [ticketLog, setTicketLog] = useState<{ ticketId: string; url: string; business: string; am: string; category: string; alertDate: string; status: string; statusType: string; createdAt: string }[]>([]);
   const [filterAM, setFilterAM] = useState("");
   const [filterSource, setFilterSource] = useState("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
@@ -96,6 +97,16 @@ export default function Dashboard() {
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const [detailAlert, setDetailAlert] = useState<Alert | null>(null);
   const [tab, setTab] = useState<"overview" | "alerts" | "tickets">("overview");
+
+  const fetchTickets = useCallback(async () => {
+    try {
+      const res = await fetch("/api/tickets-created");
+      if (res.ok) {
+        const data = await res.json();
+        setTicketLog(data.tickets || []);
+      }
+    } catch { /* silent */ }
+  }, []);
 
   const fetchAlerts = useCallback(async () => {
     setLoading(true);
@@ -109,7 +120,7 @@ export default function Dashboard() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
+  useEffect(() => { fetchAlerts(); fetchTickets(); }, [fetchAlerts, fetchTickets]);
 
   function showToast(msg: string, type: string) {
     setToast({ msg, type }); setTimeout(() => setToast(null), 5000);
@@ -190,15 +201,7 @@ export default function Dashboard() {
           showToast(`${a.business_name}: ${r.error}`, "err");
         } else {
           setTicketCreated((p) => new Map(p).set(key, r.ticketId));
-          setTicketLog((p) => [...p, {
-            ticketId: r.ticketId,
-            url: r.url,
-            business: a.business_name,
-            am: a.am_name,
-            category: a.category,
-            date: a.message_date,
-            createdAt: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-          }]);
+          fetchTickets();
           showToast(`${r.ticketId} created for ${a.business_name}`, "ok");
         }
       }
@@ -217,16 +220,9 @@ export default function Dashboard() {
           <input className={cls(inpCls, "lg:col-span-3")} placeholder="Search biz name, sender, message..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className={cls(inpCls, "lg:col-span-2")} value={filterCat} onChange={(e) => setFilterCat(e.target.value)}><option value="">All categories</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
           <select className={cls(inpCls, "lg:col-span-2")} value={filterAM} onChange={(e) => setFilterAM(e.target.value)}><option value="">All AMs</option>{ams.map((a) => <option key={a} value={a}>{a}</option>)}</select>
-          <select className={cls(inpCls, "lg:col-span-2")} value={filterSource} onChange={(e) => setFilterSource(e.target.value)}><option value="">All sources</option>{sources.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-          <div className="lg:col-span-1">
-            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.06em] text-[rgba(243,237,253,0.5)]">From</div>
-            <input className={inpCls} type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} style={{ colorScheme: "dark", fontSize: 11 }} />
-          </div>
-          <div className="lg:col-span-1">
-            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.06em] text-[rgba(243,237,253,0.5)]">To</div>
-            <input className={inpCls} type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} style={{ colorScheme: "dark", fontSize: 11 }} />
-          </div>
-          <div className="lg:col-span-1" />
+          <select className={cls(inpCls, "lg:col-span-1")} value={filterSource} onChange={(e) => setFilterSource(e.target.value)}><option value="">All sources</option>{sources.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+          <DatePicker label="From" value={filterDateFrom} onChange={setFilterDateFrom} otherValue={filterDateTo} isFrom={true} />
+          <DatePicker label="To" value={filterDateTo} onChange={setFilterDateTo} otherValue={filterDateFrom} isFrom={false} />
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[rgba(200,202,254,0.10)] pt-3">
           <span className="text-xs uppercase tracking-wider text-[rgba(243,237,253,0.55)]">
@@ -414,7 +410,7 @@ export default function Dashboard() {
       {tab === "tickets" && (
         ticketLog.length === 0 ? (
           <div className="zoca-gradient-border rounded-[2rem] bg-[#1f0843]/55 py-20 text-center backdrop-blur-sm text-[#c8cafe]">
-            No tickets created yet this session. Click the Create button on any alert row to raise a ticket.
+            No retention risk alert tickets found in the last 30 days.
           </div>
         ) : (
           <div className="zoca-fade-in zoca-gradient-border overflow-hidden rounded-[2rem]" style={{ "--fade-delay": "0.08s" } as React.CSSProperties}>
@@ -422,32 +418,39 @@ export default function Dashboard() {
               <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr className="bg-gradient-to-b from-[#1f0843] to-[#13063a]">
-                    {["#", "Ticket ID", "Business Name", "AM", "Category", "Alert Date", "Created At", "Link"].map((h) => (
+                    {["#", "Ticket ID", "Status", "Business Name", "AM", "Category", "Alert Date", "Created", "Link"].map((h) => (
                       <th key={h} className="whitespace-nowrap border-b border-[rgba(200,202,254,0.18)] px-3 py-3 text-left text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#c8cafe]">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {ticketLog.map((t, i) => (
-                    <tr key={t.ticketId + i} className="border-b border-[rgba(200,202,254,0.10)] transition hover:bg-[rgba(120,104,244,.06)]">
-                      <td className="px-3 py-3 text-[rgba(243,237,253,0.55)]">{i + 1}</td>
-                      <td className="px-3 py-3">
-                        <span className="inline-block rounded-[9999px] bg-[rgba(74,222,128,0.14)] border border-[rgba(74,222,128,0.35)] px-3 py-1 text-[11px] font-bold text-[#4ade80]">{t.ticketId}</span>
-                      </td>
-                      <td className="px-3 py-3 font-bold text-white">{t.business}</td>
-                      <td className="px-3 py-3 text-[#c8cafe]">{t.am}</td>
-                      <td className="px-3 py-3">
-                        <span className="inline-block rounded-[9999px] px-2.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: `${CAT_COLORS[t.category] || "#7868f4"}22`, color: CAT_COLORS[t.category] || "#7868f4", border: `1px solid ${CAT_COLORS[t.category] || "#7868f4"}55` }}>{t.category}</span>
-                      </td>
-                      <td className="px-3 py-3 text-[#c8cafe]">{fmtDate(t.date)}</td>
-                      <td className="px-3 py-3 text-[#c8cafe]">{t.createdAt}</td>
-                      <td className="px-3 py-3">
-                        <a href={t.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-[9999px] border border-[rgba(200,202,254,0.18)] bg-[#24125c]/50 px-3 py-1 text-[10px] font-bold text-[#c8cafe] transition hover:border-[#ffa8cd] hover:text-[#ffa8cd]">
-                          Open in Linear &#8599;
-                        </a>
-                      </td>
-                    </tr>
-                  ))}
+                  {ticketLog.map((t, i) => {
+                    const statusColors: Record<string, string> = { unstarted: "#fbbf24", started: "#60a5fa", completed: "#4ade80", canceled: "#f87171" };
+                    const sc = statusColors[t.statusType] || "#c8cafe";
+                    return (
+                      <tr key={t.ticketId + i} className="border-b border-[rgba(200,202,254,0.10)] transition hover:bg-[rgba(120,104,244,.06)]">
+                        <td className="px-3 py-3 text-[rgba(243,237,253,0.55)]">{i + 1}</td>
+                        <td className="px-3 py-3">
+                          <a href={t.url} target="_blank" rel="noopener noreferrer" className="inline-block rounded-[9999px] bg-[rgba(74,222,128,0.14)] border border-[rgba(74,222,128,0.35)] px-3 py-1 text-[11px] font-bold text-[#4ade80] hover:bg-[rgba(74,222,128,0.22)] transition">{t.ticketId}</a>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="inline-block rounded-[9999px] px-2.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: `${sc}22`, color: sc, border: `1px solid ${sc}55` }}>{t.status}</span>
+                        </td>
+                        <td className="px-3 py-3 font-bold text-white">{t.business}</td>
+                        <td className="px-3 py-3 text-[#c8cafe]">{t.am}</td>
+                        <td className="px-3 py-3">
+                          <span className="inline-block rounded-[9999px] px-2.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: `${CAT_COLORS[t.category] || "#7868f4"}22`, color: CAT_COLORS[t.category] || "#7868f4", border: `1px solid ${CAT_COLORS[t.category] || "#7868f4"}55` }}>{t.category}</span>
+                        </td>
+                        <td className="px-3 py-3 text-[#c8cafe]">{t.alertDate}</td>
+                        <td className="px-3 py-3 text-[#c8cafe]">{new Date(t.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}</td>
+                        <td className="px-3 py-3">
+                          <a href={t.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-[9999px] border border-[rgba(200,202,254,0.18)] bg-[#24125c]/50 px-3 py-1 text-[10px] font-bold text-[#c8cafe] transition hover:border-[#ffa8cd] hover:text-[#ffa8cd]">
+                            Open in Linear &#8599;
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
