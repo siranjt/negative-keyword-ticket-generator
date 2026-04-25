@@ -22,7 +22,7 @@ export async function GET() {
           createdAt
           assignee { name }
           state { name type }
-          customerNeeds { nodes { customer { name } } }
+          needs: formerNeeds { nodes { customer { name } } }
         }
       }
     }`;
@@ -56,11 +56,11 @@ export async function GET() {
         identifier: string; url: string; description: string | null; createdAt: string;
         assignee: { name: string } | null;
         state: { name: string; type: string } | null;
-        customerNeeds: { nodes: { customer: { name: string } }[] } | null;
+        needs: { nodes: { customer: { name: string } }[] } | null;
       }) => {
         const desc = t.description || "";
         const bizMatch = desc.match(/Business:\s*(.+)/);
-        const biz = bizMatch?.[1]?.trim() || t.customerNeeds?.nodes?.[0]?.customer?.name?.split(" | ")?.[0] || "Unknown";
+        const biz = bizMatch?.[1]?.trim() || t.needs?.nodes?.[0]?.customer?.name?.split(" | ")?.[0] || "Unknown";
         const catMatch = desc.match(/Risk Category:\s*(.+)/);
         const category = catMatch?.[1]?.trim() || "\u2014";
         const dateMatch = desc.match(/Date:\s*(\S+)/);
