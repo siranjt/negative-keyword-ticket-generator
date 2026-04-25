@@ -27,11 +27,6 @@ body {
   background-clip: text;
 }
 
-.sparkle-word::before {
-  content: "✦ ";
-  -webkit-text-fill-color: #ff86e1;
-}
-
 .zoca-num-gradient {
   background: linear-gradient(135deg, #ffa8cd, #c8cafe, #7868f4);
   -webkit-background-clip: text;
@@ -55,25 +50,8 @@ body {
 }
 .zoca-glow-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(255,168,205,.18);
+  box-shadow: 0 8px 30px rgba(255,168,205,.15);
   border-color: rgba(200, 202, 254, 0.28);
-}
-
-.zoca-live-ring {
-  position: relative;
-}
-.zoca-live-ring::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 2px solid #4ade80;
-  opacity: 0;
-  animation: liveRing 2s ease-out infinite;
-}
-@keyframes liveRing {
-  0% { transform: scale(0.8); opacity: 0.6; }
-  100% { transform: scale(1.6); opacity: 0; }
 }
 
 .zoca-gradient-border {
@@ -85,7 +63,7 @@ body {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(255,168,205,.4), rgba(120,104,244,.3));
+  background: linear-gradient(135deg, rgba(255,168,205,.35), rgba(120,104,244,.25));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -115,11 +93,25 @@ body {
   animation: zocaFadeIn 0.2s ease;
 }
 .modal-panel {
-  width: min(900px, 100%);
+  width: min(960px, 100%);
   max-height: 90vh;
   overflow: auto;
   background: linear-gradient(180deg, #13063a, #0a0422);
   border: 1px solid rgba(200, 202, 254, 0.18);
   border-radius: 2rem;
   box-shadow: 0 20px 60px rgba(120,104,244,.18);
+  padding: 24px;
+}
+
+/* ── Toast ── */
+.toast-ok { background: rgba(74,222,128,.14); border: 1px solid rgba(74,222,128,.35); color: #86efac; }
+.toast-err { background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.35); color: #fca5a5; }
+.toast-info { background: rgba(120,104,244,.14); border: 1px solid rgba(120,104,244,.35); color: #c8cafe; }
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+  h1 { font-size: 3rem !important; }
+}
+@media (max-width: 640px) {
+  h1 { font-size: 2rem !important; }
 }
