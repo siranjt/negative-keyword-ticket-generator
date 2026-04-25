@@ -101,11 +101,15 @@ export default function Dashboard() {
   const fetchTickets = useCallback(async () => {
     try {
       const res = await fetch("/api/tickets-created");
-      if (res.ok) {
-        const data = await res.json();
-        setTicketLog(data.tickets || []);
+      const data = await res.json();
+      if (data.tickets) {
+        setTicketLog(data.tickets);
+      } else if (data.error) {
+        console.error("Tickets API error:", data.error);
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      console.error("Failed to fetch tickets:", err);
+    }
   }, []);
 
   const fetchAlerts = useCallback(async () => {

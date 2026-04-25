@@ -97,7 +97,7 @@ async function hasDuplicate(teamId: string, entityId: string): Promise<boolean> 
       team: { id: { eq: "${teamId}" } },
       title: { eq: "${TICKET_TITLE.replace(/"/g, '\\"')}" },
       description: { contains: "${entityId}" },
-      state: { type: { in: ["unstarted", "started", "backlog"] } }
+      state: { type: { in: ["unstarted", "started"] } }
     }, first: 3) { nodes { id } }
   }`);
   return (d.issues?.nodes?.length || 0) > 0;
