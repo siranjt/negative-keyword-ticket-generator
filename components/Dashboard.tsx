@@ -84,6 +84,7 @@ export default function Dashboard() {
   const [selected, setSelected] = useState<Set<string>>(new Set());  // kept for bulk ops if needed later
   const [ticketCreating, setTicketCreating] = useState<Set<string>>(new Set());
   const [ticketCreated, setTicketCreated] = useState<Map<string, string>>(new Map()); // key → ticket ID
+  const [ticketLog, setTicketLog] = useState<{ ticketId: string; url: string; business: string; am: string; category: string; date: string; createdAt: string }[]>([]);
   const [filterAM, setFilterAM] = useState("");
   const [filterSource, setFilterSource] = useState("");
   const [filterDate, setFilterDate] = useState("");
@@ -92,7 +93,7 @@ export default function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const [detailAlert, setDetailAlert] = useState<Alert | null>(null);
-  const [tab, setTab] = useState<"overview" | "alerts">("overview");
+  const [tab, setTab] = useState<"overview" | "alerts" | "tickets">("overview");
 
   const fetchAlerts = useCallback(async () => {
     setLoading(true);
@@ -175,6 +176,15 @@ export default function Dashboard() {
           showToast(`${a.business_name}: ${r.error}`, "err");
         } else {
           setTicketCreated((p) => new Map(p).set(key, r.ticketId));
+          setTicketLog((p) => [...p, {
+            ticketId: r.ticketId,
+            url: r.url,
+            business: a.business_name,
+            am: a.am_name,
+            category: a.category,
+            date: a.message_date,
+            createdAt: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          }]);
           showToast(`${r.ticketId} created for ${a.business_name}`, "ok");
         }
       }
@@ -225,7 +235,7 @@ export default function Dashboard() {
 
       {/* ═══ TABS ═══ */}
       <div className="mb-5 flex flex-wrap gap-2">
-        {([["overview", "Overview"], ["alerts", `All alerts (${filtered.length})`]] as const).map(([t, label]) => (
+        {([["overview", "Overview"], ["alerts", `All alerts (${filtered.length})`], ["tickets", `Created Tickets (${ticketLog.length})`]] as const).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} className={cls(
             "rounded-[9999px] border px-5 py-2 text-sm font-medium transition",
             tab === t ? "border-[#ffa8cd] bg-[rgba(255,168,205,0.10)] text-white" : "border-[rgba(200,202,254,0.18)] bg-[#1f0843]/40 text-[#c8cafe] hover:border-[rgba(200,202,254,0.28)] hover:text-white"
@@ -374,10 +384,55 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!loading && filtered.length === 0 && (
+      {!loading && filtered.length === 0 && tab !== "tickets" && (
         <div className="zoca-gradient-border rounded-[2rem] bg-[#1f0843]/55 py-20 text-center backdrop-blur-sm text-[#c8cafe]">
           {alerts.length === 0 ? "No alerts found in the last 7 days" : "No alerts match your filters"}
         </div>
+      )}
+
+      {/* ═══ CREATED TICKETS TAB ═══ */}
+      {tab === "tickets" && (
+        ticketLog.length === 0 ? (
+          <div className="zoca-gradient-border rounded-[2rem] bg-[#1f0843]/55 py-20 text-center backdrop-blur-sm text-[#c8cafe]">
+            No tickets created yet this session. Click the Create button on any alert row to raise a ticket.
+          </div>
+        ) : (
+          <div className="zoca-fade-in zoca-gradient-border overflow-hidden rounded-[2rem]" style={{ "--fade-delay": "0.08s" } as React.CSSProperties}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="bg-gradient-to-b from-[#1f0843] to-[#13063a]">
+                    {["#", "Ticket ID", "Business Name", "AM", "Category", "Alert Date", "Created At", "Link"].map((h) => (
+                      <th key={h} className="whitespace-nowrap border-b border-[rgba(200,202,254,0.18)] px-3 py-3 text-left text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#c8cafe]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ticketLog.map((t, i) => (
+                    <tr key={t.ticketId + i} className="border-b border-[rgba(200,202,254,0.10)] transition hover:bg-[rgba(120,104,244,.06)]">
+                      <td className="px-3 py-3 text-[rgba(243,237,253,0.55)]">{i + 1}</td>
+                      <td className="px-3 py-3">
+                        <span className="inline-block rounded-[9999px] bg-[rgba(74,222,128,0.14)] border border-[rgba(74,222,128,0.35)] px-3 py-1 text-[11px] font-bold text-[#4ade80]">{t.ticketId}</span>
+                      </td>
+                      <td className="px-3 py-3 font-bold text-white">{t.business}</td>
+                      <td className="px-3 py-3 text-[#c8cafe]">{t.am}</td>
+                      <td className="px-3 py-3">
+                        <span className="inline-block rounded-[9999px] px-2.5 py-0.5 text-[9px] font-bold uppercase" style={{ background: `${CAT_COLORS[t.category] || "#7868f4"}22`, color: CAT_COLORS[t.category] || "#7868f4", border: `1px solid ${CAT_COLORS[t.category] || "#7868f4"}55` }}>{t.category}</span>
+                      </td>
+                      <td className="px-3 py-3 text-[#c8cafe]">{fmtDate(t.date)}</td>
+                      <td className="px-3 py-3 text-[#c8cafe]">{t.createdAt}</td>
+                      <td className="px-3 py-3">
+                        <a href={t.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-[9999px] border border-[rgba(200,202,254,0.18)] bg-[#24125c]/50 px-3 py-1 text-[10px] font-bold text-[#c8cafe] transition hover:border-[#ffa8cd] hover:text-[#ffa8cd]">
+                          Open in Linear &#8599;
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
       )}
 
       {/* ═══ DETAIL MODAL ═══ */}
