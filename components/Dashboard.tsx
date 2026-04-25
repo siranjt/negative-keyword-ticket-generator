@@ -27,12 +27,13 @@ interface TicketResult { business: string; ticketId: string; url: string; skippe
 function cls(...p: (string | false | null | undefined)[]) { return p.filter(Boolean).join(" "); }
 
 const CAT_COLORS: Record<string, string> = {
-  Cancellation: "#ff4fa8", Billing: "#a855f7", "Lead quality": "#fbbf24",
-  Technical: "#60a5fa", Disappointed: "#fb923c", Flagged: "#7868f4",
+  Cancellation: "#ff4fa8", Billing: "#c084fc", "Lead quality": "#fbbf24",
+  Technical: "#34d399", Disappointed: "#fb923c", Flagged: "#7868f4",
 };
 const SRC_COLORS: Record<string, string> = {
-  "App Chat": "#ffa8cd", Email: "#7868f4", SMS: "#ff86e1", Phone: "#60a5fa",
+  "App Chat": "#ff4fa8", Email: "#7868f4", SMS: "#34d399", Phone: "#fbbf24",
 };
+const VIBRANT_10 = ["#ff4fa8", "#fbbf24", "#34d399", "#a78bfa", "#60a5fa", "#fb923c", "#f472b6", "#38bdf8", "#c084fc", "#fcd34d"];
 
 function fmtDate(d: string) {
   try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch { return d; }
@@ -46,12 +47,15 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
   );
 }
 
-function StatCard({ label, value, sub, color, delay }: { label: string; value: string | number; sub?: string; color?: string; delay: number }) {
+function StatCard({ label, value, sub, color, delay, glow }: { label: string; value: string | number; sub?: string; color?: string; delay: number; glow?: string }) {
   return (
-    <div className="zoca-fade-in zoca-gradient-border zoca-glow-hover rounded-[2rem] bg-[#1f0843]/55 px-5 py-4 backdrop-blur-sm" style={{ "--fade-delay": `${delay}s` } as React.CSSProperties}>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[rgba(243,237,253,0.55)]">{label}</div>
-      <div className="num-hero mt-1.5 text-[26px]" style={{ color: color || "#fff" }}>{value}</div>
-      {sub && <div className="mt-0.5 text-[11px] text-[#c8cafe]">{sub}</div>}
+    <div className="zoca-fade-in zoca-gradient-border zoca-glow-hover relative overflow-hidden rounded-[2rem] bg-[#1f0843]/55 px-5 py-4 backdrop-blur-sm" style={{ "--fade-delay": `${delay}s` } as React.CSSProperties}>
+      {glow && <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: glow }} />}
+      <div className="relative">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[rgba(243,237,253,0.55)]">{label}</div>
+        <div className="num-hero mt-1.5 text-[26px]" style={{ color: color || "#fff" }}>{value}</div>
+        {sub && <div className="mt-0.5 text-[11px] text-[#c8cafe]">{sub}</div>}
+      </div>
     </div>
   );
 }
@@ -238,12 +242,12 @@ export default function Dashboard() {
         <>
           {/* ═══ STAT CARDS ═══ */}
           <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-6">
-            <StatCard label="Total alerts" value={filtered.length} sub={`${uniqueBiz} unique businesses`} delay={0.1} />
-            <StatCard label="Cancellation" value={catCounts["Cancellation"] || 0} color="#ff4fa8" sub={`${filtered.length ? (((catCounts["Cancellation"] || 0) / filtered.length) * 100).toFixed(1) : 0}% of total`} delay={0.12} />
-            <StatCard label="Billing issues" value={catCounts["Billing"] || 0} color="#a855f7" sub="Refund / charge disputes" delay={0.14} />
-            <StatCard label="Lead quality" value={catCounts["Lead quality"] || 0} color="#fbbf24" sub="No bookings / spam leads" delay={0.16} />
-            <StatCard label="Technical" value={catCounts["Technical"] || 0} color="#60a5fa" sub="Platform / service issues" delay={0.18} />
-            <StatCard label="Tickets created" value={ticketCreated.size} color={ticketCreated.size > 0 ? "#4ade80" : undefined} sub={ticketCreated.size > 0 ? "This session" : "Click Create in table"} delay={0.2} />
+            <StatCard label="Total alerts" value={filtered.length} sub={`${uniqueBiz} unique businesses`} delay={0.1} glow="#7868f4" />
+            <StatCard label="Cancellation" value={catCounts["Cancellation"] || 0} color="#ff4fa8" sub={`${filtered.length ? (((catCounts["Cancellation"] || 0) / filtered.length) * 100).toFixed(1) : 0}% of total`} delay={0.12} glow="#ff4fa8" />
+            <StatCard label="Billing issues" value={catCounts["Billing"] || 0} color="#c084fc" sub="Refund / charge disputes" delay={0.14} glow="#c084fc" />
+            <StatCard label="Lead quality" value={catCounts["Lead quality"] || 0} color="#fbbf24" sub="No bookings / spam leads" delay={0.16} glow="#fbbf24" />
+            <StatCard label="Technical" value={catCounts["Technical"] || 0} color="#34d399" sub="Platform / service issues" delay={0.18} glow="#34d399" />
+            <StatCard label="Tickets created" value={ticketCreated.size} color={ticketCreated.size > 0 ? "#38bdf8" : undefined} sub={ticketCreated.size > 0 ? "This session" : "Click Create in table"} delay={0.2} glow="#38bdf8" />
           </div>
 
           {/* ═══ CHARTS ROW 1 ═══ */}
@@ -263,10 +267,10 @@ export default function Dashboard() {
             <ChartCard title="Alerts by source" delay={0.26}>
               <div style={{ height: 220 }}>
                 <Bar
-                  data={{ labels: Object.keys(sourceCounts), datasets: [{ data: Object.values(sourceCounts), backgroundColor: Object.keys(sourceCounts).map((k) => SRC_COLORS[k] || "#7868f4"), borderRadius: 8, borderSkipped: false }] }}
+                  data={{ labels: Object.keys(sourceCounts), datasets: [{ data: Object.values(sourceCounts), backgroundColor: Object.keys(sourceCounts).map((k) => SRC_COLORS[k] || "#7868f4"), hoverBackgroundColor: Object.keys(sourceCounts).map((k) => { const m: Record<string,string> = {"App Chat":"#ff86e1",Email:"#a78bfa",SMS:"#6ee7b7",Phone:"#fcd34d"}; return m[k] || "#a78bfa"; }), borderRadius: 10, borderSkipped: false }] }}
                   options={{ responsive: true, maintainAspectRatio: false, indexAxis: "y" as const,
                     plugins: { legend: { display: false } },
-                    scales: { x: { grid: { color: "rgba(200,202,254,0.06)" } }, y: { grid: { display: false } } },
+                    scales: { x: { grid: { color: "rgba(200,202,254,0.06)" }, ticks: { color: "#c8cafe" } }, y: { grid: { display: false }, ticks: { color: "#c8cafe", font: { weight: "bold" as const } } } },
                     onClick: (_, elems) => { if (elems[0]) { setFilterSource(Object.keys(sourceCounts)[elems[0].index]); setTab("alerts"); } },
                     ...clickOpts,
                   }}
@@ -280,10 +284,15 @@ export default function Dashboard() {
             <ChartCard title="Daily alert volume · 7 days" delay={0.3}>
               <div style={{ height: 220 }}>
                 <Bar
-                  data={{ labels: dailyCounts.map(([d]) => fmtDate(d)), datasets: [{ data: dailyCounts.map(([, c]) => c), backgroundColor: "rgba(255,168,205,0.55)", hoverBackgroundColor: "#ffa8cd", borderRadius: 8, borderSkipped: false }] }}
+                  data={{ labels: dailyCounts.map(([d]) => fmtDate(d)), datasets: [{
+                    data: dailyCounts.map(([, c]) => c),
+                    backgroundColor: dailyCounts.map((_, i) => VIBRANT_10[i % VIBRANT_10.length]),
+                    hoverBackgroundColor: dailyCounts.map((_, i) => { const h = ["#ff86e1","#fcd34d","#6ee7b7","#c4b5fd","#93c5fd","#fdba74","#fda4af"]; return h[i % h.length]; }),
+                    borderRadius: 10, borderSkipped: false,
+                  }] }}
                   options={{ responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { x: { grid: { display: false } }, y: { grid: { color: "rgba(200,202,254,0.06)" }, beginAtZero: true } },
+                    scales: { x: { grid: { display: false }, ticks: { color: "#c8cafe" } }, y: { grid: { color: "rgba(200,202,254,0.06)" }, beginAtZero: true, ticks: { color: "#c8cafe" } } },
                     onClick: (_, elems) => { if (elems[0]) { setFilterDate(dailyCounts[elems[0].index][0]); setTab("alerts"); } },
                     ...clickOpts,
                   }}
@@ -293,10 +302,15 @@ export default function Dashboard() {
             <ChartCard title="AM exposure · top 10" delay={0.34}>
               <div style={{ height: 220 }}>
                 <Bar
-                  data={{ labels: amCounts.map(([n]) => n.split(" ")[0]), datasets: [{ data: amCounts.map(([, c]) => c), backgroundColor: "#7868f4", hoverBackgroundColor: "#a855f7", borderRadius: 8, borderSkipped: false }] }}
+                  data={{ labels: amCounts.map(([n]) => n.split(" ")[0]), datasets: [{
+                    data: amCounts.map(([, c]) => c),
+                    backgroundColor: amCounts.map((_, i) => VIBRANT_10[i % VIBRANT_10.length]),
+                    hoverBackgroundColor: amCounts.map((_, i) => { const h = ["#ff86e1","#fcd34d","#6ee7b7","#c4b5fd","#93c5fd","#fdba74","#fda4af","#67e8f9","#d8b4fe","#fef08a"]; return h[i % h.length]; }),
+                    borderRadius: 10, borderSkipped: false,
+                  }] }}
                   options={{ responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: { x: { grid: { display: false } }, y: { grid: { color: "rgba(200,202,254,0.06)" }, beginAtZero: true } },
+                    scales: { x: { grid: { display: false }, ticks: { color: "#c8cafe", font: { size: 10 } } }, y: { grid: { color: "rgba(200,202,254,0.06)" }, beginAtZero: true, ticks: { color: "#c8cafe" } } },
                     onClick: (_, elems) => { if (elems[0]) { setFilterAM(amCounts[elems[0].index][0]); setTab("alerts"); } },
                     ...clickOpts,
                   }}
