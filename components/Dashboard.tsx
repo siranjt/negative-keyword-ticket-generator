@@ -47,15 +47,16 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
   );
 }
 
-function StatCard({ label, value, sub, color, delay, glow }: { label: string; value: string | number; sub?: string; color?: string; delay: number; glow?: string }) {
+function StatCard({ label, value, sub, color, delay, glow, onClick }: { label: string; value: string | number; sub?: string; color?: string; delay: number; glow?: string; onClick?: () => void }) {
   return (
-    <div className="zoca-fade-in zoca-gradient-border zoca-glow-hover relative overflow-hidden rounded-[2rem] bg-[#1f0843]/55 px-5 py-4 backdrop-blur-sm" style={{ "--fade-delay": `${delay}s` } as React.CSSProperties}>
+    <div onClick={onClick} className={cls("zoca-fade-in zoca-gradient-border zoca-glow-hover relative overflow-hidden rounded-[2rem] bg-[#1f0843]/55 px-5 py-4 backdrop-blur-sm", onClick && "cursor-pointer")} style={{ "--fade-delay": `${delay}s` } as React.CSSProperties}>
       {glow && <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-20 blur-2xl" style={{ background: glow }} />}
       <div className="relative">
         <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[rgba(243,237,253,0.55)]">{label}</div>
         <div className="num-hero mt-1.5 text-[26px]" style={{ color: color || "#fff" }}>{value}</div>
         {sub && <div className="mt-0.5 text-[11px] text-[#c8cafe]">{sub}</div>}
       </div>
+      {onClick && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-base text-[rgba(200,202,254,0.3)] transition group-hover:text-[#ffa8cd]">→</span>}
     </div>
   );
 }
@@ -87,7 +88,8 @@ export default function Dashboard() {
   const [ticketLog, setTicketLog] = useState<{ ticketId: string; url: string; business: string; am: string; category: string; date: string; createdAt: string }[]>([]);
   const [filterAM, setFilterAM] = useState("");
   const [filterSource, setFilterSource] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [filterCat, setFilterCat] = useState("");
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
@@ -125,11 +127,12 @@ export default function Dashboard() {
   const filtered = useMemo(() => alerts.filter((a) => {
     if (filterAM && a.am_name !== filterAM) return false;
     if (filterSource && a.source !== filterSource) return false;
-    if (filterDate && a.message_date !== filterDate) return false;
+    if (filterDateFrom && a.message_date < filterDateFrom) return false;
+    if (filterDateTo && a.message_date > filterDateTo) return false;
     if (filterCat && a.category !== filterCat) return false;
     if (search) { const q = search.toLowerCase(); if (!a.business_name.toLowerCase().includes(q) && !a.message_body.toLowerCase().includes(q) && !a.sender.toLowerCase().includes(q)) return false; }
     return true;
-  }), [alerts, filterAM, filterSource, filterDate, filterCat, search]);
+  }), [alerts, filterAM, filterSource, filterDateFrom, filterDateTo, filterCat, search]);
 
   /* ── View aggregates (recompute on every filter change) ── */
   const uniqueBiz = useMemo(() => new Set(filtered.map((a) => a.business_name)).size, [filtered]);
@@ -140,7 +143,7 @@ export default function Dashboard() {
 
   function toggleRow(key: string) { setSelected((p) => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; }); }
   function toggleAll() { if (selected.size === filtered.length) setSelected(new Set()); else setSelected(new Set(filtered.map((a) => aKey(a, alerts.indexOf(a))))); }
-  function resetFilters() { setFilterAM(""); setFilterSource(""); setFilterDate(""); setFilterCat(""); setSearch(""); }
+  function resetFilters() { setFilterAM(""); setFilterSource(""); setFilterDateFrom(""); setFilterDateTo(""); setFilterCat(""); setSearch(""); }
 
   async function handleCreateTickets() {
     const items = alerts.map((a, i) => ({ ...a, _k: aKey(a, i) })).filter((a) => selected.has(a._k));
@@ -203,22 +206,27 @@ export default function Dashboard() {
     setTicketCreating((p) => { const n = new Set(p); n.delete(key); return n; });
   }
 
-  const hasFilters = !!(filterAM || filterSource || filterDate || filterCat || search);
+  const hasFilters = !!(filterAM || filterSource || filterDateFrom || filterDateTo || filterCat || search);
   const inpCls = "h-9 w-full rounded-[9999px] border border-[rgba(200,202,254,0.18)] bg-[#24125c]/50 px-4 text-xs text-white outline-none placeholder:text-[rgba(243,237,253,0.55)] focus:border-[#7868f4]";
 
   return (
     <>
       {/* ═══ FILTER ROW ═══ */}
       <div className="zoca-fade-in mb-4 rounded-[1.25rem] border border-[rgba(200,202,254,0.18)] bg-[#1f0843]/55 p-3 backdrop-blur-sm" style={{ "--fade-delay": "0.05s" } as React.CSSProperties}>
-        <div className="grid grid-cols-1 items-center gap-3 lg:grid-cols-12">
+        <div className="grid grid-cols-1 items-end gap-3 lg:grid-cols-12">
           <input className={cls(inpCls, "lg:col-span-3")} placeholder="Search biz name, sender, message..." value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className={cls(inpCls, "lg:col-span-2")} value={filterCat} onChange={(e) => setFilterCat(e.target.value)}><option value="">All categories</option>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</select>
           <select className={cls(inpCls, "lg:col-span-2")} value={filterAM} onChange={(e) => setFilterAM(e.target.value)}><option value="">All AMs</option>{ams.map((a) => <option key={a} value={a}>{a}</option>)}</select>
           <select className={cls(inpCls, "lg:col-span-2")} value={filterSource} onChange={(e) => setFilterSource(e.target.value)}><option value="">All sources</option>{sources.map((s) => <option key={s} value={s}>{s}</option>)}</select>
-          <select className={cls(inpCls, "lg:col-span-1")} value={filterDate} onChange={(e) => setFilterDate(e.target.value)}><option value="">All days</option>{dates.map((d) => <option key={d} value={d}>{d}</option>)}</select>
-          <button onClick={fetchAlerts} disabled={loading} className="flex h-9 items-center justify-center gap-1.5 rounded-[9999px] border border-[#ffa8cd] bg-[#ffa8cd] px-4 text-xs font-bold text-[#0b051d] shadow-[0_4px_14px_rgba(255,168,205,.28)] transition hover:bg-[#f695be] disabled:opacity-50 lg:col-span-2">
-            {loading ? <><span className="refresh-spinning inline-block">↻</span> Loading...</> : "↻ Refresh live data"}
-          </button>
+          <div className="lg:col-span-1">
+            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.06em] text-[rgba(243,237,253,0.5)]">From</div>
+            <input className={inpCls} type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} style={{ colorScheme: "dark", fontSize: 11 }} />
+          </div>
+          <div className="lg:col-span-1">
+            <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.06em] text-[rgba(243,237,253,0.5)]">To</div>
+            <input className={inpCls} type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} style={{ colorScheme: "dark", fontSize: 11 }} />
+          </div>
+          <div className="lg:col-span-1" />
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[rgba(200,202,254,0.10)] pt-3">
           <span className="text-xs uppercase tracking-wider text-[rgba(243,237,253,0.55)]">
@@ -238,7 +246,8 @@ export default function Dashboard() {
           {filterAM && <FilterChip label={`AM: ${filterAM}`} onClear={() => setFilterAM("")} />}
           {filterSource && <FilterChip label={`source: ${filterSource}`} onClear={() => setFilterSource("")} />}
           {filterCat && <FilterChip label={`category: ${filterCat}`} onClear={() => setFilterCat("")} />}
-          {filterDate && <FilterChip label={`date: ${filterDate}`} onClear={() => setFilterDate("")} />}
+          {filterDateFrom && <FilterChip label={`from: ${filterDateFrom}`} onClear={() => setFilterDateFrom("")} />}
+          {filterDateTo && <FilterChip label={`to: ${filterDateTo}`} onClear={() => setFilterDateTo("")} />}
           {search && <FilterChip label={`search: ${search}`} onClear={() => setSearch("")} />}
           <button onClick={resetFilters} className="text-xs font-semibold text-[#ff4fa8] underline hover:text-[#ffa8cd]">reset all</button>
         </div>
@@ -263,12 +272,12 @@ export default function Dashboard() {
         <>
           {/* ═══ STAT CARDS ═══ */}
           <div className="mb-5 grid grid-cols-2 gap-3.5 lg:grid-cols-6">
-            <StatCard label="Total alerts" value={filtered.length} sub={`${uniqueBiz} unique businesses`} delay={0.1} glow="#7868f4" />
-            <StatCard label="Cancellation" value={catCounts["Cancellation"] || 0} color="#ff4fa8" sub={`${filtered.length ? (((catCounts["Cancellation"] || 0) / filtered.length) * 100).toFixed(1) : 0}% of total`} delay={0.12} glow="#ff4fa8" />
-            <StatCard label="Billing issues" value={catCounts["Billing"] || 0} color="#c084fc" sub="Refund / charge disputes" delay={0.14} glow="#c084fc" />
-            <StatCard label="Lead quality" value={catCounts["Lead quality"] || 0} color="#fbbf24" sub="No bookings / spam leads" delay={0.16} glow="#fbbf24" />
-            <StatCard label="Technical" value={catCounts["Technical"] || 0} color="#34d399" sub="Platform / service issues" delay={0.18} glow="#34d399" />
-            <StatCard label="Tickets created" value={ticketCreated.size} color={ticketCreated.size > 0 ? "#38bdf8" : undefined} sub={ticketCreated.size > 0 ? "This session" : "Click Create in table"} delay={0.2} glow="#38bdf8" />
+            <StatCard label="Total alerts" value={filtered.length} sub={`${uniqueBiz} unique businesses`} delay={0.1} glow="#7868f4" onClick={() => { resetFilters(); setTab("alerts"); }} />
+            <StatCard label="Cancellation" value={catCounts["Cancellation"] || 0} color="#ff4fa8" sub={`${filtered.length ? (((catCounts["Cancellation"] || 0) / filtered.length) * 100).toFixed(1) : 0}% of total`} delay={0.12} glow="#ff4fa8" onClick={() => { resetFilters(); setFilterCat("Cancellation"); setTab("alerts"); }} />
+            <StatCard label="Billing issues" value={catCounts["Billing"] || 0} color="#c084fc" sub="Refund / charge disputes" delay={0.14} glow="#c084fc" onClick={() => { resetFilters(); setFilterCat("Billing"); setTab("alerts"); }} />
+            <StatCard label="Lead quality" value={catCounts["Lead quality"] || 0} color="#fbbf24" sub="No bookings / spam leads" delay={0.16} glow="#fbbf24" onClick={() => { resetFilters(); setFilterCat("Lead quality"); setTab("alerts"); }} />
+            <StatCard label="Technical" value={catCounts["Technical"] || 0} color="#34d399" sub="Platform / service issues" delay={0.18} glow="#34d399" onClick={() => { resetFilters(); setFilterCat("Technical"); setTab("alerts"); }} />
+            <StatCard label="Tickets created" value={ticketCreated.size} color={ticketCreated.size > 0 ? "#38bdf8" : undefined} sub={ticketCreated.size > 0 ? "This session" : "Click Create in table"} delay={0.2} glow="#38bdf8" onClick={() => setTab("tickets")} />
           </div>
 
           {/* ═══ CHARTS ROW 1 ═══ */}
@@ -314,7 +323,7 @@ export default function Dashboard() {
                   options={{ responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: { x: { grid: { display: false }, ticks: { color: "#c8cafe" } }, y: { grid: { color: "rgba(200,202,254,0.06)" }, beginAtZero: true, ticks: { color: "#c8cafe" } } },
-                    onClick: (_, elems) => { if (elems[0]) { setFilterDate(dailyCounts[elems[0].index][0]); setTab("alerts"); } },
+                    onClick: (_, elems) => { if (elems[0]) { const d = dailyCounts[elems[0].index][0]; setFilterDateFrom(d); setFilterDateTo(d); setTab("alerts"); } },
                     ...clickOpts,
                   }}
                 />
