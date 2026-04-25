@@ -8,26 +8,34 @@ export async function GET() {
     const apiKey = process.env.LINEAR_API_KEY;
     if (!apiKey) return NextResponse.json({ tickets: [], error: "LINEAR_API_KEY not set" }, { status: 500 });
 
+    const query = `{
+      issues(
+        filter: { team: { id: { eq: "${FINANCE_TEAM_ID}" } } }
+        orderBy: createdAt
+        first: 250
+      ) {
+        nodes {
+          identifier
+          title
+          url
+          description
+          createdAt
+          assignee { name }
+          state { name type }
+          customerNeeds { nodes { customer { name } } }
+        }
+      }
+    }`;
+
     const res = await fetch(LINEAR_API, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: apiKey },
-      body: JSON.stringify({
-        query: `query($teamId: ID!, $first: Int!) {
-          issues(filter: { team: { id: { eq: $teamId } } }, orderBy: createdAt, first: $first) {
-            nodes {
-              identifier title url description createdAt
-              assignee { name }
-              state { name type }
-              customerNeeds { nodes { customer { name } } }
-            }
-          }
-        }`,
-        variables: { teamId: FINANCE_TEAM_ID, first: 250 }
-      }),
+      body: JSON.stringify({ query }),
     });
 
     if (!res.ok) {
-      return NextResponse.json({ tickets: [], error: `Linear HTTP ${res.status}` }, { status: 500 });
+      const text = await res.text().catch(() => "");
+      return NextResponse.json({ tickets: [], error: `Linear HTTP ${res.status}: ${text.slice(0, 200)}` }, { status: 500 });
     }
 
     const json = await res.json();
@@ -37,13 +45,12 @@ export async function GET() {
 
     const allIssues = json.data?.issues?.nodes || [];
 
-    // Client-side filter: RETENTION RISK ALERT + open states only (Todo, In Progress, In Review — NOT Backlog)
     const openStates = new Set(["Todo", "In Progress", "In Review"]);
 
     const tickets = allIssues
       .filter((t: { title: string; state: { name: string } | null }) =>
-        t.title.includes("RETENTION RISK ALERT") &&
-        openStates.has(t.state?.name || "")
+        t.title && t.title.includes("RETENTION RISK ALERT") &&
+        t.state && openStates.has(t.state.name)
       )
       .map((t: {
         identifier: string; url: string; description: string | null; createdAt: string;
@@ -55,9 +62,9 @@ export async function GET() {
         const bizMatch = desc.match(/Business:\s*(.+)/);
         const biz = bizMatch?.[1]?.trim() || t.customerNeeds?.nodes?.[0]?.customer?.name?.split(" | ")?.[0] || "Unknown";
         const catMatch = desc.match(/Risk Category:\s*(.+)/);
-        const category = catMatch?.[1]?.trim() || "—";
+        const category = catMatch?.[1]?.trim() || "\u2014";
         const dateMatch = desc.match(/Date:\s*(\S+)/);
-        const alertDate = dateMatch?.[1]?.trim() || "—";
+        const alertDate = dateMatch?.[1]?.trim() || "\u2014";
 
         return {
           ticketId: t.identifier,
