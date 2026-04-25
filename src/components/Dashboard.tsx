@@ -79,9 +79,7 @@ export default function Dashboard() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchAlerts();
-  }, [fetchAlerts]);
+  useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
 
   function showToast(msg: string, type: string) {
     setToast({ msg, type });
@@ -97,12 +95,7 @@ export default function Dashboard() {
       if (filterDate && a.message_date !== filterDate) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (
-          !a.business_name.toLowerCase().includes(q) &&
-          !a.message_body.toLowerCase().includes(q) &&
-          !(a.sender || "").toLowerCase().includes(q)
-        )
-          return false;
+        if (!a.business_name.toLowerCase().includes(q) && !a.message_body.toLowerCase().includes(q) && !(a.sender || "").toLowerCase().includes(q)) return false;
       }
       return true;
     });
@@ -111,7 +104,6 @@ export default function Dashboard() {
   const ams = useMemo(() => [...new Set(alerts.map((a) => a.am_name))].sort(), [alerts]);
   const sources = useMemo(() => [...new Set(alerts.map((a) => a.source))].sort(), [alerts]);
   const dates = useMemo(() => [...new Set(alerts.map((a) => a.message_date))].sort().reverse(), [alerts]);
-
   const uniqueBusinesses = useMemo(() => new Set(alerts.map((a) => a.business_name)).size, [alerts]);
   const cancelCount = useMemo(
     () => alerts.filter((a) => RISK_KEYWORDS.cancel.pattern.test(`${a.subject || ""} ${a.message_body}`)).length,
@@ -121,8 +113,7 @@ export default function Dashboard() {
   function toggleRow(key: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }
@@ -150,9 +141,7 @@ export default function Dashboard() {
         message_time: a.message_time,
         risk_category: classifyRisk(a.message_body, a.subject).label,
       }));
-
     if (selectedAlerts.length === 0) return;
-
     setCreating(true);
     try {
       const res = await fetch("/api/create-tickets", {
@@ -161,16 +150,13 @@ export default function Dashboard() {
         body: JSON.stringify({ alerts: selectedAlerts }),
       });
       const data = await res.json();
-
       if (data.results) {
         const created = data.results.filter((r: TicketResult) => !r.skipped && !r.error);
         const skipped = data.results.filter((r: TicketResult) => r.skipped);
         const errors = data.results.filter((r: TicketResult) => r.error);
-
         let msg = `${created.length} ticket(s) created`;
         if (skipped.length) msg += `, ${skipped.length} skipped (duplicate)`;
         if (errors.length) msg += `, ${errors.length} failed`;
-
         showToast(msg, errors.length ? "err" : "ok");
         setSelected(new Set());
       }
@@ -181,142 +167,131 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="wrap">
-      {/* Header */}
-      <header className="topbar">
-        <div className="brand">
-          <div className="title">
-            Negative Keyword Alerts
-            <span>Retention risk monitoring</span>
+    <>
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14, marginBottom: 20 }}>
+        {[
+          { label: "Total alerts", value: alerts.length, color: "" },
+          { label: "Businesses", value: uniqueBusinesses, color: "" },
+          { label: "Cancellation intent", value: cancelCount, color: cancelCount > 0 ? "var(--color-zoca-bad)" : "var(--color-zoca-ok)" },
+          { label: "Selected", value: selected.size, color: selected.size > 0 ? "var(--color-zoca-warn)" : "" },
+        ].map((kpi, i) => (
+          <div key={i} className="zoca-card-sm zoca-glow-hover zoca-fade-in" style={{ "--fade-delay": `${i * 0.08}s` } as React.CSSProperties}>
+            <div style={{ fontSize: 10.5, textTransform: "uppercase", letterSpacing: "0.8px", color: "var(--color-zoca-text-soft)", fontWeight: 600 }}>
+              {kpi.label}
+            </div>
+            <div className="num-hero" style={{ fontSize: 26, marginTop: 6, color: kpi.color || "var(--color-zoca-text-primary)" }}>
+              {kpi.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter Row */}
+      <div className="zoca-card zoca-fade-in" style={{ "--fade-delay": "0.3s", padding: 12, marginBottom: 18 } as React.CSSProperties}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 10, alignItems: "center" }}>
+          <input
+            className="zoca-input"
+            style={{ gridColumn: "span 3" }}
+            placeholder="Search business, message..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select className="zoca-input" style={{ gridColumn: "span 3" }} value={filterAM} onChange={(e) => setFilterAM(e.target.value)}>
+            <option value="">All AMs</option>
+            {ams.map((am) => <option key={am} value={am}>{am}</option>)}
+          </select>
+          <select className="zoca-input" style={{ gridColumn: "span 2" }} value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
+            <option value="">All sources</option>
+            {sources.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select className="zoca-input" style={{ gridColumn: "span 2" }} value={filterDate} onChange={(e) => setFilterDate(e.target.value)}>
+            <option value="">All dates</option>
+            {dates.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <div style={{ gridColumn: "span 2", display: "flex", gap: 6 }}>
+            <button className="btn-zoca-outline" onClick={fetchAlerts} disabled={loading} style={{ flex: 1 }}>
+              {loading ? <span className="refresh-spinning" style={{ display: "inline-block" }}>&#8635;</span> : "&#8635;"} Refresh
+            </button>
           </div>
         </div>
-        <div className="top-meta">
-          <span className="pill">
-            <span className="dot" /> Live
+        <div style={{
+          marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--color-zoca-border)",
+          display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12,
+        }}>
+          <span style={{ color: "var(--color-zoca-text-soft)" }}>
+            Showing <b style={{ color: "var(--color-zoca-text-primary)" }}>{filtered.length}</b> / {alerts.length}
+            {fetchedAt && <> &middot; last refresh {new Date(fetchedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</>}
           </span>
-          <span className="pill">
-            Last <b>24h</b>
-          </span>
-          {fetchedAt && (
-            <span className="pill">
-              Updated{" "}
-              <b>
-                {new Date(fetchedAt).toLocaleTimeString("en-US", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </b>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-zoca-outline" onClick={toggleAll} style={{ fontSize: 11 }}>
+              {selected.size === filtered.length && filtered.length > 0 ? "Deselect all" : "Select all"}
+            </button>
+            <button
+              className="btn-zoca-pink"
+              disabled={selected.size === 0 || creating}
+              onClick={handleCreateTickets}
+            >
+              {creating ? (
+                <><span className="refresh-spinning" style={{ display: "inline-block", marginRight: 6 }}>&#8635;</span>Creating...</>
+              ) : (
+                `Create tickets (${selected.size})`
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Active filter chips */}
+      {(filterAM || filterSource || filterDate || search) && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+          {filterAM && (
+            <span className="zoca-badge" style={{ cursor: "pointer" }} onClick={() => setFilterAM("")}>
+              AM: {filterAM} ✕
             </span>
           )}
-          <button className="btn pink" onClick={fetchAlerts} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="spinner" /> Refreshing...
-              </>
-            ) : (
-              "Refresh data"
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* KPI Cards */}
-      <div className="kpis">
-        <div className="kpi">
-          <div className="lbl">Total alerts</div>
-          <div className="val">{alerts.length}</div>
-        </div>
-        <div className="kpi">
-          <div className="lbl">Businesses</div>
-          <div className="val">{uniqueBusinesses}</div>
-        </div>
-        <div className="kpi">
-          <div className="lbl">Cancellation intent</div>
-          <div className={`val ${cancelCount > 0 ? "bad" : "ok"}`}>{cancelCount}</div>
-        </div>
-        <div className="kpi">
-          <div className="lbl">Selected</div>
-          <div className={`val ${selected.size > 0 ? "warn" : ""}`}>{selected.size}</div>
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div className="actions-bar">
-        <button
-          className="btn primary"
-          disabled={selected.size === 0 || creating}
-          onClick={handleCreateTickets}
-        >
-          {creating ? (
-            <>
-              <span className="spinner" /> Creating...
-            </>
-          ) : (
-            `Create tickets (${selected.size})`
+          {filterSource && (
+            <span className="zoca-badge" style={{ cursor: "pointer" }} onClick={() => setFilterSource("")}>
+              Source: {filterSource} ✕
+            </span>
           )}
-        </button>
-        <span className="sel-count">{selected.size} selected</span>
-        <button className="link-btn" onClick={toggleAll}>
-          {selected.size === filtered.length && filtered.length > 0 ? "Deselect all" : "Select all"}
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="controls">
-        <select value={filterAM} onChange={(e) => setFilterAM(e.target.value)}>
-          <option value="">All AMs</option>
-          {ams.map((am) => (
-            <option key={am} value={am}>
-              {am}
-            </option>
-          ))}
-        </select>
-        <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
-          <option value="">All sources</option>
-          {sources.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <select value={filterDate} onChange={(e) => setFilterDate(e.target.value)}>
-          <option value="">All dates</option>
-          {dates.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder="Search business, message, sender..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+          {filterDate && (
+            <span className="zoca-badge" style={{ cursor: "pointer" }} onClick={() => setFilterDate("")}>
+              Date: {filterDate} ✕
+            </span>
+          )}
+          {search && (
+            <span className="zoca-badge" style={{ cursor: "pointer" }} onClick={() => setSearch("")}>
+              Search: {search} ✕
+            </span>
+          )}
+          <span
+            className="zoca-badge"
+            style={{ cursor: "pointer", background: "rgba(255,168,205,.12)", color: "var(--color-zoca-pink-1)", borderColor: "rgba(255,168,205,.35)" }}
+            onClick={() => { setFilterAM(""); setFilterSource(""); setFilterDate(""); setSearch(""); }}
+          >
+            Reset all
+          </span>
+        </div>
+      )}
 
       {/* Table */}
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "var(--ink-dim)" }}>
-          <span className="spinner" /> Loading alerts...
+        <div style={{ textAlign: "center", padding: 60, color: "var(--color-zoca-text-muted)" }}>
+          <span className="refresh-spinning" style={{ display: "inline-block", fontSize: 20, marginRight: 10 }}>&#8635;</span>
+          Loading alerts...
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 60, color: "var(--ink-dim)" }}>
-          {alerts.length === 0
-            ? "No alerts found in the last 24 hours"
-            : "No alerts match your filters"}
+        <div className="zoca-card" style={{ textAlign: "center", padding: 60, color: "var(--color-zoca-text-muted)" }}>
+          {alerts.length === 0 ? "No alerts found in the last 24 hours" : "No alerts match your filters"}
         </div>
       ) : (
-        <div className="tbl-wrap">
-          <table>
+        <div className="zoca-tbl-wrap zoca-fade-in" style={{ "--fade-delay": "0.4s" } as React.CSSProperties}>
+          <table className="zoca-tbl">
             <thead>
               <tr>
                 <th style={{ width: 40, textAlign: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={selected.size === filtered.length && filtered.length > 0}
-                    onChange={toggleAll}
-                  />
+                  <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
                 </th>
                 <th style={{ width: "24%" }}>Business</th>
                 <th style={{ width: "13%" }}>AM</th>
@@ -331,39 +306,29 @@ export default function Dashboard() {
                 const risk = classifyRisk(alert.message_body, alert.subject);
                 const isSelected = selected.has(key);
                 return (
-                  <tr
-                    key={key + idx}
-                    className={isSelected ? "selected" : ""}
-                    onClick={() => toggleRow(key)}
-                    style={{ cursor: "pointer" }}
-                  >
+                  <tr key={key + idx} className={isSelected ? "selected" : ""} onClick={() => toggleRow(key)} style={{ cursor: "pointer" }}>
                     <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleRow(key)}
-                      />
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleRow(key)} />
                     </td>
                     <td>
-                      <span className="biz-name">{alert.business_name}</span>
+                      <span style={{ fontWeight: 700, color: "#fff", fontSize: 12.5 }}>{alert.business_name}</span>
                       <br />
                       <span className={`risk-pill ${risk.cls}`}>{risk.label}</span>
                     </td>
-                    <td style={{ color: "var(--ink-dim)", fontSize: 12 }}>{alert.am_name}</td>
-                    <td>
-                      <span className={`badge ${srcBadgeClass(alert.source)}`}>
-                        {alert.source}
-                      </span>
-                    </td>
+                    <td style={{ color: "var(--color-zoca-text-muted)", fontSize: 12 }}>{alert.am_name}</td>
+                    <td><span className={`zoca-badge ${srcBadgeClass(alert.source)}`}>{alert.source}</span></td>
                     <td>
                       {formatDate(alert.message_date)}
                       <br />
-                      <span style={{ fontSize: 10, color: "var(--ink-dimmer)" }}>
-                        {alert.message_time}
-                      </span>
+                      <span style={{ fontSize: 10, color: "var(--color-zoca-text-soft)" }}>{alert.message_time}</span>
                     </td>
                     <td>
-                      <div className="msg-text">{alert.message_body}</div>
+                      <div className="msg-text" style={{
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
+                        overflow: "hidden", lineHeight: 1.45, fontSize: 11.5, color: "var(--color-zoca-text-muted)",
+                      }}>
+                        {alert.message_body}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -375,6 +340,6 @@ export default function Dashboard() {
 
       {/* Toast */}
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
-    </div>
+    </>
   );
 }
