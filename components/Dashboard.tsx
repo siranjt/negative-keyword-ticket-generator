@@ -77,7 +77,9 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchedAt, setFetchedAt] = useState("");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());  // kept for bulk ops if needed later
+  const [ticketCreating, setTicketCreating] = useState<Set<string>>(new Set());
+  const [ticketCreated, setTicketCreated] = useState<Map<string, string>>(new Map()); // key → ticket ID
   const [filterAM, setFilterAM] = useState("");
   const [filterSource, setFilterSource] = useState("");
   const [filterDate, setFilterDate] = useState("");
@@ -153,6 +155,29 @@ export default function Dashboard() {
     setCreating(false);
   }
 
+  async function createSingleTicket(a: Alert, key: string) {
+    setTicketCreating((p) => new Set(p).add(key));
+    try {
+      const res = await fetch("/api/create-tickets", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alerts: [{ entity_id: a.entity_id, business_name: a.business_name, am_name: a.am_name, message_body: a.message_body, source: a.source, message_date: a.message_date, message_time: a.message_time, risk_category: a.category }] }),
+      });
+      const data = await res.json();
+      if (data.results?.[0]) {
+        const r = data.results[0] as TicketResult;
+        if (r.skipped) {
+          showToast(`${a.business_name}: skipped — open ticket already exists`, "err");
+        } else if (r.error) {
+          showToast(`${a.business_name}: ${r.error}`, "err");
+        } else {
+          setTicketCreated((p) => new Map(p).set(key, r.ticketId));
+          showToast(`${r.ticketId} created for ${a.business_name}`, "ok");
+        }
+      }
+    } catch { showToast(`Failed to create ticket for ${a.business_name}`, "err"); }
+    setTicketCreating((p) => { const n = new Set(p); n.delete(key); return n; });
+  }
+
   const hasFilters = !!(filterAM || filterSource || filterDate || filterCat || search);
   const inpCls = "h-9 w-full rounded-[9999px] border border-[rgba(200,202,254,0.18)] bg-[#24125c]/50 px-4 text-xs text-white outline-none placeholder:text-[rgba(243,237,253,0.55)] focus:border-[#7868f4]";
 
@@ -166,8 +191,8 @@ export default function Dashboard() {
           <select className={cls(inpCls, "lg:col-span-2")} value={filterAM} onChange={(e) => setFilterAM(e.target.value)}><option value="">All AMs</option>{ams.map((a) => <option key={a} value={a}>{a}</option>)}</select>
           <select className={cls(inpCls, "lg:col-span-2")} value={filterSource} onChange={(e) => setFilterSource(e.target.value)}><option value="">All sources</option>{sources.map((s) => <option key={s} value={s}>{s}</option>)}</select>
           <select className={cls(inpCls, "lg:col-span-1")} value={filterDate} onChange={(e) => setFilterDate(e.target.value)}><option value="">All days</option>{dates.map((d) => <option key={d} value={d}>{d}</option>)}</select>
-          <button onClick={selected.size > 0 ? handleCreateTickets : fetchAlerts} disabled={creating || loading} className="flex h-9 items-center justify-center gap-1.5 rounded-[9999px] border border-[#ffa8cd] bg-[#ffa8cd] px-4 text-xs font-bold text-[#0b051d] shadow-[0_4px_14px_rgba(255,168,205,.28)] transition hover:bg-[#f695be] disabled:opacity-50 lg:col-span-2">
-            {creating ? "Creating..." : selected.size > 0 ? `Create tickets (${selected.size})` : loading ? "Loading..." : "↻ Refresh live data"}
+          <button onClick={fetchAlerts} disabled={loading} className="flex h-9 items-center justify-center gap-1.5 rounded-[9999px] border border-[#ffa8cd] bg-[#ffa8cd] px-4 text-xs font-bold text-[#0b051d] shadow-[0_4px_14px_rgba(255,168,205,.28)] transition hover:bg-[#f695be] disabled:opacity-50 lg:col-span-2">
+            {loading ? <><span className="refresh-spinning inline-block">↻</span> Loading...</> : "↻ Refresh live data"}
           </button>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[rgba(200,202,254,0.10)] pt-3">
@@ -218,7 +243,7 @@ export default function Dashboard() {
             <StatCard label="Billing issues" value={catCounts["Billing"] || 0} color="#a855f7" sub="Refund / charge disputes" delay={0.14} />
             <StatCard label="Lead quality" value={catCounts["Lead quality"] || 0} color="#fbbf24" sub="No bookings / spam leads" delay={0.16} />
             <StatCard label="Technical" value={catCounts["Technical"] || 0} color="#60a5fa" sub="Platform / service issues" delay={0.18} />
-            <StatCard label="Selected" value={selected.size} color={selected.size > 0 ? "#fbbf24" : undefined} sub={selected.size > 0 ? "Ready to create tickets" : "Select from table"} delay={0.2} />
+            <StatCard label="Tickets created" value={ticketCreated.size} color={ticketCreated.size > 0 ? "#4ade80" : undefined} sub={ticketCreated.size > 0 ? "This session" : "Click Create in table"} delay={0.2} />
           </div>
 
           {/* ═══ CHARTS ROW 1 ═══ */}
@@ -289,10 +314,7 @@ export default function Dashboard() {
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="bg-gradient-to-b from-[#1f0843] to-[#13063a]">
-                  <th className="w-10 border-b border-[rgba(200,202,254,0.18)] p-3 text-center">
-                    <input type="checkbox" className="h-4 w-4 accent-[#7868f4]" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} />
-                  </th>
-                  {["Date", "Time", "Source", "Sender", "Entity ID", "Business Name", "AM Name", "Category", "Subject", "Message", "Analysis"].map((h) => (
+                  {["Date", "Time", "Source", "Entity ID", "Business Name", "AM Name", "Category", "Subject", "Message", "Analysis", "Ticket"].map((h) => (
                     <th key={h} className="whitespace-nowrap border-b border-[rgba(200,202,254,0.18)] px-2 py-3 text-left text-[9.5px] font-bold uppercase tracking-[0.05em] text-[#c8cafe]">{h}</th>
                   ))}
                 </tr>
@@ -300,22 +322,36 @@ export default function Dashboard() {
               <tbody>
                 {filtered.map((a, idx) => {
                   const key = aKey(a, alerts.indexOf(a));
-                  const isSel = selected.has(key);
                   const cc = CAT_COLORS[a.category] || "#7868f4";
+                  const isCreating = ticketCreating.has(key);
+                  const createdId = ticketCreated.get(key);
                   return (
-                    <tr key={key + idx} onClick={() => toggleRow(key)} className={cls("cursor-pointer border-b border-[rgba(200,202,254,0.10)] transition", isSel ? "bg-[rgba(255,168,205,.08)]" : "hover:bg-[rgba(120,104,244,.06)]")}>
-                      <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="h-4 w-4 accent-[#7868f4]" checked={isSel} onChange={() => toggleRow(key)} /></td>
+                    <tr key={key + idx} className="border-b border-[rgba(200,202,254,0.10)] transition hover:bg-[rgba(120,104,244,.06)]">
                       <td className="whitespace-nowrap px-2 py-2 text-[#c8cafe]">{fmtDate(a.message_date)}</td>
                       <td className="whitespace-nowrap px-2 py-2 text-[rgba(243,237,253,0.55)]">{a.message_time}</td>
                       <td className="px-2 py-2"><span className="inline-block rounded-[9999px] border border-[rgba(200,202,254,0.18)] bg-[#24125c]/50 px-2 py-0.5 text-[10px] font-bold text-[#c8cafe]">{a.source}</span></td>
-                      <td className="max-w-[100px] truncate px-2 py-2 text-[#c8cafe]">{a.sender}</td>
                       <td className="max-w-[80px] truncate px-2 py-2 font-mono text-[10px] text-[rgba(243,237,253,0.55)]">{a.entity_id.slice(0, 8)}...</td>
-                      <td className="px-2 py-2"><button onClick={(e) => { e.stopPropagation(); setDetailAlert(a); }} className="block max-w-[140px] truncate text-left font-bold text-white hover:text-[#ffa8cd]">{a.business_name}</button></td>
+                      <td className="px-2 py-2"><button onClick={() => setDetailAlert(a)} className="block max-w-[140px] truncate text-left font-bold text-white hover:text-[#ffa8cd]">{a.business_name}</button></td>
                       <td className="max-w-[90px] truncate px-2 py-2 text-[#c8cafe]">{a.am_name}</td>
                       <td className="px-2 py-2"><span className="inline-block rounded-[9999px] px-2 py-0.5 text-[9px] font-bold uppercase" style={{ background: `${cc}22`, color: cc, border: `1px solid ${cc}55` }}>{a.category}</span></td>
                       <td className="max-w-[120px] truncate px-2 py-2 text-[#c8cafe]">{a.subject || "—"}</td>
                       <td className="max-w-[180px] px-2 py-2"><div className="line-clamp-2 text-[11px] leading-relaxed text-[#c8cafe]">{a.message_body}</div></td>
                       <td className="max-w-[200px] px-2 py-2"><div className="line-clamp-2 text-[11px] leading-relaxed text-[#ffa8cd]/80">{a.analysis}</div></td>
+                      <td className="px-2 py-2 text-center">
+                        {createdId ? (
+                          <a href={`https://linear.app/zoca/issue/${createdId}`} target="_blank" rel="noopener noreferrer" className="inline-block rounded-[9999px] bg-[rgba(74,222,128,0.14)] px-3 py-1 text-[10px] font-bold text-[#4ade80] border border-[rgba(74,222,128,0.35)] hover:bg-[rgba(74,222,128,0.22)] transition">
+                            {createdId} ↗
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => createSingleTicket(a, key)}
+                            disabled={isCreating}
+                            className="inline-flex items-center gap-1 rounded-[9999px] border border-[#ffa8cd] bg-[#ffa8cd]/10 px-3 py-1 text-[10px] font-bold text-[#ffa8cd] transition hover:bg-[#ffa8cd] hover:text-[#0b051d] disabled:opacity-50"
+                          >
+                            {isCreating ? <><span className="refresh-spinning inline-block text-[10px]">↻</span></> : "Create"}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
