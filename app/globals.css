@@ -2,19 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Body — pink + purple dual tone (from zoca.com) ── */
 body {
   background: #0b051d;
   color: #ffffff;
   min-height: 100vh;
   background-image:
-    radial-gradient(1100px 550px at 85% -5%, rgba(255,168,205,.22), transparent 55%),
-    radial-gradient(900px 500px at -5% 10%, rgba(120,104,244,.28), transparent 55%),
-    radial-gradient(1400px 700px at 50% 110%, rgba(120,104,244,.12), transparent 60%),
-    radial-gradient(600px 400px at 95% 50%, rgba(255,134,225,.12), transparent 50%);
+    radial-gradient(ellipse 1200px 600px at 50% -5%, rgba(31,8,67,.95), transparent 60%),
+    radial-gradient(ellipse 800px 500px at 90% 0%, rgba(255,134,225,.16), transparent 50%),
+    radial-gradient(ellipse 600px 400px at 10% 5%, rgba(120,104,244,.18), transparent 50%),
+    radial-gradient(ellipse 1400px 700px at 50% 100%, rgba(120,104,244,.08), transparent 60%);
 }
 
-/* ── Typography ── */
 .num-hero {
   font-family: var(--font-display), 'Montserrat', system-ui, sans-serif;
   font-weight: 900;
@@ -22,97 +20,57 @@ body {
 }
 
 .zoca-gradient-text {
-  background: linear-gradient(135deg, #ffa8cd, #c8cafe);
+  background: linear-gradient(135deg, #ffa8cd 0%, #e5ccff 50%, #c8cafe 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.zoca-num-gradient {
-  background: linear-gradient(135deg, #ffa8cd, #c8cafe, #7868f4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── Motion ── */
 .zoca-fade-in {
   opacity: 0;
   transform: translateY(12px);
   animation: zocaFadeIn 0.5s ease forwards;
   animation-delay: var(--fade-delay, 0s);
 }
-@keyframes zocaFadeIn {
-  to { opacity: 1; transform: none; }
-}
+@keyframes zocaFadeIn { to { opacity: 1; transform: none; } }
 
 .zoca-glow-hover {
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 .zoca-glow-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(255,168,205,.15), 0 4px 20px rgba(120,104,244,.1);
+  box-shadow: 0 8px 30px rgba(255,168,205,.12), 0 4px 20px rgba(120,104,244,.08);
   border-color: rgba(200, 202, 254, 0.28);
 }
 
-.zoca-gradient-border {
-  position: relative;
-}
+.zoca-gradient-border { position: relative; }
 .zoca-gradient-border::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(255,168,205,.35), rgba(120,104,244,.25));
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
+  background: linear-gradient(135deg, rgba(255,168,205,.30), rgba(120,104,244,.20));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
 }
 
-.refresh-spinning {
-  animation: spin 0.8s linear infinite;
-}
+.refresh-spinning { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.pulse-dot {
-  animation: pulseDot 2s ease-in-out infinite;
-}
-@keyframes pulseDot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
+.pulse-dot { animation: pulseDot 2s ease-in-out infinite; }
+@keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-/* ── Modal ── */
 .modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(3,4,15,.78);
-  backdrop-filter: blur(8px);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 100; padding: 32px;
+  position: fixed; inset: 0; background: rgba(3,4,15,.78); backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 32px;
   animation: zocaFadeIn 0.2s ease;
 }
 .modal-panel {
-  width: min(960px, 100%);
-  max-height: 90vh;
-  overflow: auto;
+  width: min(960px, 100%); max-height: 90vh; overflow: auto;
   background: linear-gradient(180deg, #1f0843, #0b051d);
-  border: 1px solid rgba(200, 202, 254, 0.18);
-  border-radius: 2rem;
-  box-shadow: 0 20px 60px rgba(120,104,244,.18);
-  padding: 24px;
+  border: 1px solid rgba(200, 202, 254, 0.18); border-radius: 2rem;
+  box-shadow: 0 20px 60px rgba(120,104,244,.18); padding: 24px;
 }
 
-/* ── Toast ── */
 .toast-ok { background: rgba(74,222,128,.14); border: 1px solid rgba(74,222,128,.35); color: #86efac; }
 .toast-err { background: rgba(248,113,113,.14); border: 1px solid rgba(248,113,113,.35); color: #fca5a5; }
-.toast-info { background: rgba(120,104,244,.14); border: 1px solid rgba(120,104,244,.35); color: #c8cafe; }
 
-/* ── Responsive ── */
-@media (max-width: 1024px) {
-  h1 { font-size: 3rem !important; }
-}
-@media (max-width: 640px) {
-  h1 { font-size: 2rem !important; }
-}
+@media (max-width: 1024px) { h1 { font-size: 3rem !important; } }
+@media (max-width: 640px) { h1 { font-size: 2rem !important; } }
