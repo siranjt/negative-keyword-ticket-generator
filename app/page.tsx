@@ -29,7 +29,7 @@ export default function Home() {
         </div>
         {/* Title */}
         <h1
-          className="relative mx-auto mb-5 font-[var(--font-montserrat)] text-[4.75rem] font-black leading-[0.95] tracking-[-0.03em]"
+          className="relative mx-auto mb-5 font-[var(--font-gothic)] text-[4.75rem] font-black leading-[0.95] tracking-[-0.03em]"
         >
           <span className="text-white">Keyword </span>
           <span className="zoca-gradient-text">Alerts</span>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat } from "next/font/google";
+import localFont from "next/font/local";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -8,9 +9,20 @@ const inter = Inter({
   display: "swap",
 });
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-montserrat",
+const gothicA1 = localFont({
+  src: [
+    {
+      path: "../public/fonts/GothicA1-Black.woff2",
+      weight: "900",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/GothicA1-SemiBold.woff2",
+      weight: "600",
+      style: "normal",
+    },
+  ],
+  variable: "--font-gothic",
   display: "swap",
 });
 
@@ -25,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${montserrat.variable}`}>
+    <html lang="en" className={`${inter.variable} ${gothicA1.variable}`}>
       <body className="font-[var(--font-inter)] antialiased">{children}</body>
     </html>
   );
