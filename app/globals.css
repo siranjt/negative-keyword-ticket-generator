@@ -2,15 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Body ── */
+/* ── Body — pink + purple dual tone (from zoca.com) ── */
 body {
-  background: #0a0422;
+  background: #0b051d;
   color: #ffffff;
   min-height: 100vh;
   background-image:
-    radial-gradient(1200px 600px at -10% -10%, rgba(120,104,244,.22), transparent 60%),
-    radial-gradient(900px 500px at 110% 0%, rgba(255,168,205,.18), transparent 55%),
-    radial-gradient(1400px 800px at 50% 120%, rgba(120,104,244,.10), transparent 60%);
+    radial-gradient(1100px 550px at 85% -5%, rgba(255,168,205,.22), transparent 55%),
+    radial-gradient(900px 500px at -5% 10%, rgba(120,104,244,.28), transparent 55%),
+    radial-gradient(1400px 700px at 50% 110%, rgba(120,104,244,.12), transparent 60%),
+    radial-gradient(600px 400px at 95% 50%, rgba(255,134,225,.12), transparent 50%);
 }
 
 /* ── Typography ── */
@@ -50,7 +51,7 @@ body {
 }
 .zoca-glow-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(255,168,205,.15);
+  box-shadow: 0 8px 30px rgba(255,168,205,.15), 0 4px 20px rgba(120,104,244,.1);
   border-color: rgba(200, 202, 254, 0.28);
 }
 
@@ -96,7 +97,7 @@ body {
   width: min(960px, 100%);
   max-height: 90vh;
   overflow: auto;
-  background: linear-gradient(180deg, #13063a, #0a0422);
+  background: linear-gradient(180deg, #1f0843, #0b051d);
   border: 1px solid rgba(200, 202, 254, 0.18);
   border-radius: 2rem;
   box-shadow: 0 20px 60px rgba(120,104,244,.18);
