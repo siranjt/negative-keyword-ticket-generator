@@ -321,7 +321,7 @@ export default function Dashboard() {
           <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <h2 className="font-[var(--font-gothic)] text-xl font-extrabold">{detailAlert.business_name}</h2>
+                <h2 className="font-[var(--font-display)] text-xl font-extrabold">{detailAlert.business_name}</h2>
                 <p className="mt-1 text-sm text-[#c8cafe]">AM: {detailAlert.am_name} · {detailAlert.source} · {detailAlert.message_date} {detailAlert.message_time}</p>
               </div>
               <button onClick={() => setDetailAlert(null)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-[rgba(200,202,254,0.18)] text-sm text-[#c8cafe] transition hover:border-[#f87171] hover:bg-[rgba(248,113,113,.15)] hover:text-white">✕</button>

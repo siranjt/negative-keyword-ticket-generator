@@ -15,7 +15,7 @@ body {
 
 /* ── Typography ── */
 .num-hero {
-  font-family: var(--font-gothic), 'Gothic A1', Arial, sans-serif;
+  font-family: var(--font-display), 'Montserrat', system-ui, sans-serif;
   font-weight: 900;
   font-variant-numeric: tabular-nums lining-nums;
 }
