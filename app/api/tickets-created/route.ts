@@ -4,7 +4,7 @@ const LINEAR_API = "https://api.linear.app/graphql";
 
 async function linearFetch(query: string) {
   const apiKey = process.env.LINEAR_API_KEY;
-  if (!apiKey) throw new Error("LINEAR_API_KEY not set");
+  if (!apiKey) return { error: "LINEAR_API_KEY not set" };
 
   const res = await fetch(LINEAR_API, {
     method: "POST",
@@ -12,42 +12,34 @@ async function linearFetch(query: string) {
     body: JSON.stringify({ query }),
   });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Linear HTTP ${res.status}: ${text.slice(0, 200)}`);
-  }
-
+  if (!res.ok) return { error: `HTTP ${res.status}` };
   const json = await res.json();
-  if (json.errors?.length) throw new Error(json.errors[0].message);
+  if (json.errors?.length) return { error: json.errors[0].message };
   return json.data;
 }
 
 export async function GET() {
   try {
-    // Simple approach: search issues on Finance team, filter client-side
-    const data = await linearFetch(`{
-      team(id: "Finance") {
-        id
-      }
-    }`);
-
-    // Get team ID first
-    let teamId = data?.team?.id;
-    if (!teamId) {
-      const teamsData = await linearFetch(`{ teams { nodes { id name } } }`);
-      const team = teamsData.teams.nodes.find((t: { name: string }) => t.name.toLowerCase() === "finance");
-      if (!team) throw new Error("Finance team not found");
-      teamId = team.id;
+    // Step 1: Get Finance team ID
+    const teamsData = await linearFetch(`{ teams { nodes { id name } } }`) as { teams?: { nodes: { id: string; name: string }[] }; error?: string };
+    if ("error" in teamsData && teamsData.error) {
+      return NextResponse.json({ tickets: [], error: teamsData.error }, { status: 500 });
+    }
+    const financeTeam = (teamsData as { teams: { nodes: { id: string; name: string }[] } }).teams.nodes.find(
+      (t) => t.name.toLowerCase() === "finance"
+    );
+    if (!financeTeam) {
+      return NextResponse.json({ tickets: [], error: "Finance team not found" }, { status: 500 });
     }
 
-    // Fetch open issues from Finance team (Todo, In Progress, In Review only)
+    // Step 2: Fetch open issues (Todo + In Progress + In Review) from Finance team
     const issuesData = await linearFetch(`{
       issues(
         filter: {
-          team: { id: { eq: "${teamId}" } },
+          team: { id: { eq: "${financeTeam.id}" } }
           state: { type: { in: ["unstarted", "started"] } }
-        },
-        orderBy: createdAt,
+        }
+        orderBy: createdAt
         first: 250
       ) {
         nodes {
@@ -65,39 +57,41 @@ export async function GET() {
           }
         }
       }
-    }`);
+    }`) as { issues?: { nodes: Record<string, unknown>[] }; error?: string };
 
-    const allIssues = issuesData?.issues?.nodes || [];
+    if ("error" in issuesData && issuesData.error) {
+      return NextResponse.json({ tickets: [], error: issuesData.error }, { status: 500 });
+    }
 
-    // Filter client-side for RETENTION RISK ALERT tickets from last 30 days
-    const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const allIssues = ((issuesData as { issues: { nodes: Record<string, unknown>[] } }).issues?.nodes || []) as {
+      identifier: string;
+      title: string;
+      url: string;
+      description: string | null;
+      createdAt: string;
+      assignee: { name: string } | null;
+      state: { name: string; type: string } | null;
+      customerNeeds: { nodes: { customer: { name: string } }[] } | null;
+    }[];
 
+    // Step 3: Filter for RETENTION RISK ALERT tickets only
     const tickets = allIssues
-      .filter((t: { title: string; createdAt: string }) =>
-        t.title.includes("RETENTION RISK ALERT") &&
-        new Date(t.createdAt).getTime() > since
-      )
-      .map((t: {
-        identifier: string;
-        url: string;
-        description: string;
-        createdAt: string;
-        assignee: { name: string } | null;
-        state: { name: string; type: string } | null;
-        customerNeeds: { nodes: { customer: { name: string } }[] };
-      }) => {
-        const bizMatch = t.description?.match(/Business:\s*(.+)/);
+      .filter((t) => t.title && t.title.includes("RETENTION RISK ALERT"))
+      .map((t, i) => {
+        const desc = t.description || "";
+        const bizMatch = desc.match(/Business:\s*(.+)/);
         const biz = bizMatch?.[1]?.trim() ||
           t.customerNeeds?.nodes?.[0]?.customer?.name?.split(" | ")?.[0] ||
           "Unknown";
 
-        const catMatch = t.description?.match(/Risk Category:\s*(.+)/);
+        const catMatch = desc.match(/Risk Category:\s*(.+)/);
         const category = catMatch?.[1]?.trim() || "—";
 
-        const dateMatch = t.description?.match(/Date:\s*(\S+)/);
+        const dateMatch = desc.match(/Date:\s*(\S+)/);
         const alertDate = dateMatch?.[1]?.trim() || "—";
 
         return {
+          index: i + 1,
           ticketId: t.identifier,
           url: t.url,
           business: biz,
@@ -111,15 +105,12 @@ export async function GET() {
       });
 
     // Sort newest first
-    tickets.sort((a: { createdAt: string }, b: { createdAt: string }) =>
-      b.createdAt.localeCompare(a.createdAt)
-    );
+    tickets.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
     return NextResponse.json({ tickets, total: tickets.length });
   } catch (err) {
-    console.error("Error fetching tickets:", err);
     return NextResponse.json(
-      { tickets: [], error: err instanceof Error ? err.message : "Failed to fetch tickets" },
+      { tickets: [], error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
     );
   }
