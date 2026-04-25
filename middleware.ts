@@ -3,8 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip auth for health check and cron routes
-  if (pathname === "/api/health" || pathname.startsWith("/api/cron/")) {
+  // Skip auth for health check, cron routes, and internal API routes
+  // Internal APIs (/api/alerts, /api/create-tickets) are called by the
+  // dashboard frontend which is already behind Basic Auth on page load
+  if (
+    pathname === "/api/health" ||
+    pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/alerts") ||
+    pathname.startsWith("/api/create-tickets")
+  ) {
     return NextResponse.next();
   }
 

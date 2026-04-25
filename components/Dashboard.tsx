@@ -167,7 +167,18 @@ export default function Dashboard() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alerts: [{ entity_id: a.entity_id, business_name: a.business_name, am_name: a.am_name, message_body: a.message_body, source: a.source, message_date: a.message_date, message_time: a.message_time, risk_category: a.category }] }),
       });
+      if (!res.ok) {
+        const errText = await res.text().catch(() => `HTTP ${res.status}`);
+        showToast(`${a.business_name}: API error — ${errText.slice(0, 100)}`, "err");
+        setTicketCreating((p) => { const n = new Set(p); n.delete(key); return n; });
+        return;
+      }
       const data = await res.json();
+      if (data.error) {
+        showToast(`${a.business_name}: ${data.error}`, "err");
+        setTicketCreating((p) => { const n = new Set(p); n.delete(key); return n; });
+        return;
+      }
       if (data.results?.[0]) {
         const r = data.results[0] as TicketResult;
         if (r.skipped) {

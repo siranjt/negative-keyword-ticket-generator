@@ -89,7 +89,7 @@ async function linearQuery(query: string, variables: Record<string, unknown> = {
 
   const res = await fetch(LINEAR_API, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: apiKey },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ query, variables }),
   });
 
